@@ -18,7 +18,7 @@ import java.util.logging.Logger;
 public class AppServer {
 	private final static Logger logger = Logger.getLogger(AppServer.class
 			.getName());
-	public final static String terminateCommand = "terminate";
+	public final static byte[] terminateCommand = "terminate".getBytes();
 	// only accept numbers of 9 digits, that is from [0, 1 billion)
 	public final static int BILLION = 1000000000;
 	// server config parameter loaded from properties file

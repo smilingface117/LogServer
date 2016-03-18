@@ -56,10 +56,21 @@ public class DataProcessor implements Runnable {
 					}
 				}
 				//check if we are terminated
-				String cmd = new String(data,i,AppServer.NUM_DIGITS);
-				if (cmd.equalsIgnoreCase(AppServer.terminateCommand)) {
-					srv.shutdown();
-					return true;
+				if (data[i] < '0' || data[i] > '9') {
+					boolean terminated = true;
+					for (int j = 0; j < AppServer.NUM_DIGITS; j++) {
+						if (data[i + j] != AppServer.terminateCommand[j]) {
+							terminated = false;
+							break;
+						}
+					}
+					if (terminated) {
+						srv.shutdown();
+						return true;						
+					} else {
+						inputError = true;
+						break processLoop;
+					}
 				}
 				// make sure we have 9 valid digits
 				int num = 0;
