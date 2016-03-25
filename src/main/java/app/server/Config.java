@@ -6,12 +6,12 @@ public class Config {
 	public int listenPort = 9876;
 	public int maxClients = 5;
 	public String logFile = "/tmp/numbers.log";
-	public int logFileBatchSize = 16384; // 16k
+	public int logFileBatchSize = 32768; // 32k
 	public int sockRecvBufSiz = 102400; // 100k
 	public int sockChanRecvBufSiz = 102400; // 100k
 	public long reportIntervalMs = 10000; // 10sec for each report
 	public int numDataProcessors = 4;
-	public int serverRunSec = 30; //run server for 10 sec
+	public int serverRunSec = 30; // run server for 10 sec
 
 	public Config(Properties props) {
 		String port = props.getProperty("listener.port");

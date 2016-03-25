@@ -11,19 +11,20 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Logger;
 
-
 public class LogFileWriter implements Runnable {
 	private final static Logger logger = Logger.getLogger(LogFileWriter.class
 			.getName());
-	private AppServer srv;
+	private final AppServer srv;
 	private FileChannel fout;
-	AtomicBoolean exit = new AtomicBoolean();
-	
+	final AtomicBoolean exit = new AtomicBoolean();
+
 	public LogFileWriter(AppServer s) {
 		srv = s;
 		try {
 			Path path = Paths.get(srv.cfg.logFile);
-			fout = FileChannel.open(path, StandardOpenOption.CREATE, StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING);
+			fout = FileChannel.open(path, StandardOpenOption.CREATE,
+					StandardOpenOption.WRITE,
+					StandardOpenOption.TRUNCATE_EXISTING);
 			logger.info("log file created");
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -41,11 +42,11 @@ public class LogFileWriter implements Runnable {
 					bbufs = srv.bbufQue.take();
 				} catch (InterruptedException e) {
 					logger.warning(e.getMessage());
-					continue; //go check if exit flag set
+					continue; // go check if exit flag set
 				}
-				logger.info("recv "+bbufs.size()+" byte buffers");
-				//accum batch size
-				for(ByteBuffer bb: bbufs) {
+				logger.info("recv " + bbufs.size() + " bytebuffers");
+				// accum batch size
+				for (ByteBuffer bb : bbufs) {
 					batchSize += bb.remaining();
 				}
 				// combine remaining list
@@ -75,5 +76,5 @@ public class LogFileWriter implements Runnable {
 			}
 		}
 		logger.info("Number log writer exit");
-	} 
+	}
 }

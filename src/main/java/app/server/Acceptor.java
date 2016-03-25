@@ -14,11 +14,11 @@ import java.util.logging.Logger;
 public class Acceptor implements Runnable {
 	private final static Logger logger = Logger.getLogger(Acceptor.class
 			.getName());
-	private AppServer srv;
-	private Semaphore sema;
-	private List<SocketChannel> actSockets = new ArrayList<SocketChannel>();
-	private AtomicBoolean active = new AtomicBoolean();
-	private ServerSocketChannel serverSock = null;
+	private final AppServer srv;
+	private final Semaphore sema;
+	private final List<SocketChannel> actSockets = new ArrayList<SocketChannel>();
+	private final AtomicBoolean active = new AtomicBoolean();
+	private ServerSocketChannel serverSock;
 
 	public Acceptor(AppServer as) {
 		srv = as;

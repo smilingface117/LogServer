@@ -24,29 +24,29 @@ public class AppServer {
 	// server config parameter loaded from properties file
 	final static int NUM_DIGITS = 9;
 	final static byte[] LineSep = System.lineSeparator().getBytes();
-	final static int RECORD_SIZE = NUM_DIGITS+LineSep.length;
-	
+	final static int RECORD_SIZE = NUM_DIGITS + LineSep.length;
+
 	final Config cfg;
 	final ExecutorService pool;
 	final ScheduledExecutorService sched;
 	final ScheduledFuture<?> reporter;
-	private AtomicBoolean active = new AtomicBoolean();
+	private final AtomicBoolean active = new AtomicBoolean();
 
 	// use AtomicBitSet (with 1 billion bits) to save if a number has been saved
 	final AtomicBitSet savedNumbers = new AtomicBitSet(BILLION);
 	// socker connection acceptor
-	Acceptor acceptor;
+	final Acceptor acceptor;
 	// work que of DataProcessors
-	LinkedBlockingQueue<Job> jobQue;
+	final LinkedBlockingQueue<Job> jobQue;
 	// queue of ByteBuffers ready to write to log file
-	LinkedBlockingQueue<List<ByteBuffer>> bbufQue;
+	final LinkedBlockingQueue<List<ByteBuffer>> bbufQue;
 	// processing status
-	AtomicInteger lastUniqs, lastDups, uniqTotal;
-	//data processors
-	DataProcessor[] dataProcs;
-	//file writer
-	LogFileWriter logWriter;
-	Thread logWriterThread;
+	final AtomicInteger lastUniqs, lastDups, uniqTotal;
+	// data processors
+	final DataProcessor[] dataProcs;
+	// file writer
+	final LogFileWriter logWriter;
+	final Thread logWriterThread;
 
 	public AppServer(Properties props) {
 		cfg = new Config(props);
@@ -58,32 +58,35 @@ public class AppServer {
 		lastUniqs = new AtomicInteger();
 		lastDups = new AtomicInteger();
 		uniqTotal = new AtomicInteger();
-		//spawn file writer
+		// spawn file writer
 		logWriter = new LogFileWriter(this);
 		logWriterThread = new Thread(logWriter);
 		logWriterThread.start();
-		//spawn data processors
+		// spawn data processors
 		dataProcs = new DataProcessor[cfg.numDataProcessors];
-		for(int i=0;i<cfg.numDataProcessors;i++) {
+		for (int i = 0; i < cfg.numDataProcessors; i++) {
 			dataProcs[i] = new DataProcessor(this);
 			pool.execute(dataProcs[i]);
 		}
-		//spawn acceptor
+		// spawn acceptor
 		acceptor = new Acceptor(this);
 		pool.execute(acceptor);
-		//schedule reporter
+		// schedule reporter
 		Runnable reportTask = new Runnable() {
 			public void run() {
-				System.out.println("Received: "+lastUniqs.get()+" unique numbers, "+lastDups.get()+" duplicates. Unique total: "+uniqTotal.get());
-				//clear status for last period
+				System.out.println("Received: " + lastUniqs.get()
+						+ " unique numbers, " + lastDups.get()
+						+ " duplicates. Unique total: " + uniqTotal.get());
+				// clear status for last period
 				lastUniqs.set(0);
 				lastDups.set(0);
 			}
 		};
-		reporter = sched.scheduleAtFixedRate(reportTask, 0, cfg.reportIntervalMs, TimeUnit.MILLISECONDS);
+		reporter = sched.scheduleAtFixedRate(reportTask, 0,
+				cfg.reportIntervalMs, TimeUnit.MILLISECONDS);
 		logger.info("AppServer started");
 	}
-	
+
 	public void updateStatus(int uniqN, int dupN) {
 		lastUniqs.addAndGet(uniqN);
 		lastDups.addAndGet(dupN);
@@ -91,40 +94,52 @@ public class AppServer {
 	}
 
 	public void shutdown() {
-		synchronized(this) {
+		synchronized (this) {
 			notifyAll();
 		}
 	}
+
 	public void close() {
 		if (active.get()) {
 			active.set(false);
-			//close sockets, and so shutdown acceptor and socket handlers
+			// close sockets, and so shutdown acceptor and socket handlers
 			acceptor.close();
-			//first notify log file writer to exit, close fileChan, flush cache
+			// first notify log file writer to exit, close fileChan, flush cache
 			logWriter.exit.set(true);
 			logWriterThread.interrupt();
-			//shutdown processors forcely since it is useless anymore
+			// shutdown processors forcely since it is useless anymore
 			pool.shutdown(); // Disable new tasks from being submitted
 			pool.shutdownNow(); // Cancel currently executing tasks
-			//cancel reporter timed tasks
+			// cancel reporter timed tasks
 			reporter.cancel(true);
 			sched.shutdown();
 			sched.shutdownNow();
-			//wait for log file writer to finish, so we have clean log file
+			// wait for log file writer to finish, so we have clean log file
 			try {
 				logWriterThread.join();
 			} catch (InterruptedException e) {
 				try {
 					logWriterThread.join();
-				} catch (InterruptedException ee) {		
-				}				
+				} catch (InterruptedException ee) {
+				}
 			}
-			//make sure threadpool threads exit
+			// make sure threadpool threads exit
+			pool.shutdownNow();
 			try {
+				// Wait a while for tasks to respond to being cancelled
 				if (!pool.awaitTermination(30, TimeUnit.SECONDS)) {
 					System.err.println("Pool did not terminate");
+					pool.shutdownNow();
+					// Wait a while for tasks to respond to being cancelled
+					if (!pool.awaitTermination(60, TimeUnit.SECONDS)) {
+						System.err.println("Pool did not terminate");
+					}
 				}
 			} catch (InterruptedException ie) {
+				// (Re-)Cancel if current thread also interrupted
+				pool.shutdownNow();
+				// Preserve interrupt status
+				Thread.currentThread().interrupt();
 			}
 			logger.info("AppServer exited");
 		}
@@ -151,9 +166,9 @@ public class AppServer {
 				srv.close();
 			}
 		}
-	
-		//let server run for a while
-		synchronized(srv) {
+
+		// let server run for a while
+		synchronized (srv) {
 			try {
 				srv.wait(srv.cfg.serverRunSec * 1000);
 			} catch (InterruptedException e) {
@@ -161,7 +176,7 @@ public class AppServer {
 				e.printStackTrace();
 			}
 		}
-		//shutdown
+		// shutdown
 		if (fis != null) {
 			try {
 				fis.close();

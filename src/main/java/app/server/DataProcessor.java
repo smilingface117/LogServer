@@ -8,8 +8,8 @@ import java.util.List;
 import java.util.logging.Logger;
 
 class Job {
-	public SocketChannel sockCh;
-	public List<byte[]> data;
+	public final SocketChannel sockCh;
+	public final List<byte[]> data;
 
 	public Job(SocketChannel sc) {
 		sockCh = sc;
@@ -20,7 +20,7 @@ class Job {
 public class DataProcessor implements Runnable {
 	private final static Logger logger = Logger.getLogger(DataProcessor.class
 			.getName());
-	private AppServer srv;
+	private final AppServer srv;
 
 	public DataProcessor(AppServer s) {
 		srv = s;
@@ -55,7 +55,7 @@ public class DataProcessor implements Runnable {
 						break processLoop;
 					}
 				}
-				//check if we are terminated
+				// check if we are terminated
 				if (data[i] < '0' || data[i] > '9') {
 					boolean terminated = true;
 					for (int j = 0; j < AppServer.NUM_DIGITS; j++) {
@@ -66,7 +66,7 @@ public class DataProcessor implements Runnable {
 					}
 					if (terminated) {
 						srv.shutdown();
-						return true;						
+						return true;
 					} else {
 						inputError = true;
 						break processLoop;
@@ -97,38 +97,38 @@ public class DataProcessor implements Runnable {
 					}
 				}
 				if (skip) {
-					logger.info("skip: segment["+idx0+","+(i - idx0)+"]");
+					// logger.info("skip: segment["+idx0+","+(i - idx0)+"]");
 					if (i > idx0) {
-						bufsToWrite.add(ByteBuffer.wrap(data, idx0,
-								(i - idx0)));
+						bufsToWrite
+								.add(ByteBuffer.wrap(data, idx0, (i - idx0)));
 					}
 					idx0 = i + AppServer.RECORD_SIZE;
 				}
 			}
-			logger.info("add segment["+idx0+","+data.length+"]");
+			// logger.info("add segment["+idx0+","+data.length+"]");
 			if (data.length > idx0) {
 				bufsToWrite.add(ByteBuffer.wrap(data, idx0,
 						(data.length - idx0)));
 			}
 		}
-		//push cached result
+		// push cached result
 		if (bufsToWrite.size() > 0) {
 			try {
 				srv.bbufQue.put(bufsToWrite);
 			} catch (InterruptedException e) {
 			}
 		}
-		//close input socket channel to allow socket handler exit
+		// close input socket channel to allow socket handler exit
 		if (inputError) {
 			try {
 				job.sockCh.close();
-			} catch(IOException ioe) {
-				
-			}			
+			} catch (IOException ioe) {
+
+			}
 		}
 		// update server status
 		srv.updateStatus(numNew, numDup);
 		return false;
 	}
-	
+
 }
